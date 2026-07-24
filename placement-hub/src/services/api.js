@@ -35,8 +35,9 @@ api.interceptors.response.use(
     }
 
     const message =
-      error?.response?.data?.message ||
-      error?.response?.data?.error ||
+          error?.response?.data?.message ||
+          error?.response?.data ||
+          error?.response?.data?.error ||
       (status === 403
         ? "You don't have permission to do that."
         : status === 500

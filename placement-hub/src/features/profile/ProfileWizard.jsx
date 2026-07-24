@@ -1,45 +1,63 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight, Phone, Calendar, Hash } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Phone, Calendar, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import SearchableSelect from "@/components/ui/SearchableSelect";
-import ChipInput from "@/components/ui/ChipInput";
+import SkillSelect from "@/components/ui/SkillSelect";
 import { BRANCHES, GENDERS } from "@/constants";
 import { studentService } from "@/services/studentService";
+import { useAuth } from "@/context/AuthContext";
 
 const schema = z.object({
-  rollNumber: z.string().min(1, "Roll number is required"),
   branch: z.string().min(1, "Select your branch"),
   graduationYear: z
     .string()
     .min(4, "Enter a valid year")
     .max(4, "Enter a valid year"),
-  backlogs: z.string().min(1, "Enter 0 if you have none"),
   phoneNumber: z
     .string()
     .min(10, "Enter a valid phone number")
     .max(15, "Enter a valid phone number"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   gender: z.string().min(1, "Select your gender"),
-  cgpa: z.string().min(1, "CGPA is required"),
 });
 
 const STEPS = ["Personal details", "Academic details", "Skills"];
 
 export default function ProfileWizard() {
   const router = useRouter();
+  const { user } = useAuth();
+  const rollNumber = user?.email
+    ? user.email.substring(0, user.email.indexOf('@')).substring(0, 10).toUpperCase()
+    : "";
   const [step, setStep] = useState(0);
   const [skills, setSkills] = useState([]);
+  const [availableSkills, setAvailableSkills] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    studentService.fetchSkills()
+      .then(({ data }) => {
+        console.log("[ProfileWizard] Fetched skills:", data);
+        setAvailableSkills(data || []);
+      })
+      .catch((err) => {
+        console.error("[ProfileWizard] Failed to fetch skills:", err);
+      });
+  }, []);
+  const [fetchingResults, setFetchingResults] = useState(false);
+  const [resultsFetched, setResultsFetched] = useState(false);
+  const [fetchedCgpa, setFetchedCgpa] = useState(null);
+  const [fetchedBacklogs, setFetchedBacklogs] = useState(null);
 
   const {
     register,
@@ -53,15 +71,38 @@ export default function ProfileWizard() {
   const branch = watch("branch");
   const gender = watch("gender");
 
+  const handleFetchResults = async () => {
+    if (!rollNumber) {
+      toast.error("Could not determine roll number from your email");
+      return;
+    }
+    setFetchingResults(true);
+    try {
+      const { data } = await studentService.fetchResults(rollNumber);
+      setFetchedCgpa(data.cgpa);
+      setFetchedBacklogs(data.totalBacklogs);
+      setResultsFetched(true);
+      toast.success("Results fetched successfully");
+    } catch {
+      toast.error("Could not fetch results. Check your roll number and try again.");
+    } finally {
+      setFetchingResults(false);
+    }
+  };
+
   const stepFields = [
     ["phoneNumber", "dateOfBirth", "gender"],
-    ["rollNumber", "branch", "graduationYear", "backlogs", "cgpa"],
+    ["branch", "graduationYear"],
     [],
   ];
 
   const goNext = async () => {
     const valid = await trigger(stepFields[step]);
     if (!valid) return;
+    if (step === 1 && !resultsFetched) {
+      toast.error("Please fetch your results before continuing");
+      return;
+    }
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
 
@@ -75,8 +116,8 @@ export default function ProfileWizard() {
       await studentService.createProfile({
         ...values,
         graduationYear: Number(values.graduationYear),
-        backlogs: Number(values.backlogs),
-        cgpa: Number(values.cgpa),
+        backlogs: fetchedBacklogs,
+        cgpa: fetchedCgpa,
         skills,
       });
       toast.success("Profile created successfully");
@@ -160,14 +201,26 @@ export default function ProfileWizard() {
               transition={{ duration: 0.25 }}
               className="space-y-5"
             >
-              <Input
-                label="Roll number"
-                icon={Hash}
-                placeholder="21A91A0501"
-                required
-                error={errors.rollNumber?.message}
-                {...register("rollNumber")}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--border)] px-3.5 py-3 opacity-60">
+                  <p className="text-xs font-medium text-[var(--muted)] mb-1">Roll number</p>
+                  <p className="text-sm font-semibold text-[var(--foreground)]">{rollNumber}</p>
+                </div>
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--border)] px-3.5 py-3 opacity-60">
+                  <p className="text-xs font-medium text-[var(--muted)] mb-1">Email</p>
+                  <p className="text-sm font-semibold text-[var(--foreground)] truncate">{user?.email}</p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                icon={RefreshCw}
+                isLoading={fetchingResults}
+                onClick={handleFetchResults}
+                className="w-full"
+              >
+                Fetch results
+              </Button>
               <SearchableSelect
                 label="Branch"
                 options={BRANCHES}
@@ -184,21 +237,23 @@ export default function ProfileWizard() {
                   error={errors.graduationYear?.message}
                   {...register("graduationYear")}
                 />
-                <Input
-                  label="Active backlogs"
-                  placeholder="0"
-                  required
-                  error={errors.backlogs?.message}
-                  {...register("backlogs")}
-                />
               </div>
-              <Input
-                label="CGPA"
-                placeholder="8.5"
-                required
-                error={errors.cgpa?.message}
-                {...register("cgpa")}
-              />
+              {resultsFetched ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--border)] px-3.5 py-3 opacity-60">
+                    <p className="text-xs font-medium text-[var(--muted)] mb-1">CGPA</p>
+                    <p className="text-sm font-semibold text-[var(--foreground)]">{fetchedCgpa}</p>
+                  </div>
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--border)] px-3.5 py-3 opacity-60">
+                    <p className="text-xs font-medium text-[var(--muted)] mb-1">Active backlogs</p>
+                    <p className="text-sm font-semibold text-[var(--foreground)]">{fetchedBacklogs}</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-[var(--muted)] text-center">
+                  CGPA and backlogs will be auto-filled after fetching results.
+                </p>
+              )}
             </motion.div>
           )}
 
@@ -211,11 +266,11 @@ export default function ProfileWizard() {
               transition={{ duration: 0.25 }}
               className="space-y-5"
             >
-              <ChipInput
+              <SkillSelect
                 label="Skills"
                 value={skills}
                 onChange={setSkills}
-                hint="Press Enter or comma after each skill, e.g. Java, Spring Boot, React"
+                availableSkills={availableSkills}
               />
               <p className="text-xs text-[var(--muted)]">
                 You can upload your photo and resume right after creating your profile.

@@ -1,6 +1,8 @@
 import api from "./api";
 
 export const studentService = {
+  fetchResults: (rollNumber) => api.get(`/api/student/results/${rollNumber}`),
+  fetchSkills: () => api.get("/api/student/skills"),
   createProfile: (payload) => api.post("/api/student/profile", payload),
   getProfile: () => api.get("/api/student/profile"),
   updateProfile: (payload) => api.patch("/api/student/profile", payload),

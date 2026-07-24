@@ -4,9 +4,12 @@ import com.cloudinary.Cloudinary;
 import com.pms.backend.dto.request.CreateStudentRequest;
 import com.pms.backend.dto.request.UpdateStudentRequest;
 import com.pms.backend.dto.response.StudentResponse;
+import com.pms.backend.dto.CollegeResultResponse;
 import com.pms.backend.entity.Skill;
 import com.pms.backend.entity.Student;
 import com.pms.backend.entity.User;
+import com.pms.backend.exception.StudentNotFoundException;
+import com.pms.backend.exception.DuplicateRollNumberException;
 import com.pms.backend.repository.SkillRepository;
 import com.pms.backend.repository.StudentRepository;
 import com.pms.backend.repository.UserRepository;
@@ -83,7 +86,7 @@ public class StudentServiceImpl implements StudentService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return studentRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+                .orElseThrow(() -> new StudentNotFoundException("Student not found"));
     }
 
     @Override
@@ -94,23 +97,30 @@ public class StudentServiceImpl implements StudentService {
         studentRepository.findByUser(currUser).ifPresent(student -> {
             throw new RuntimeException("Profile already Created");
         });
-        if(studentRepository.existsByRollNumber(request.getRollNumber())){
-            throw new RuntimeException("Roll number is already exist");
+
+        // Derive roll number from the first 10 characters of the verified college email
+        String localPart = loggedInUserEmail.substring(0, loggedInUserEmail.indexOf('@'));
+        if (localPart.length() < 10) {
+            throw new IllegalArgumentException("Email format invalid: local part must be at least 10 characters");
+        }
+        String rollNumber = localPart.substring(0, 10).toUpperCase();
+
+        if(studentRepository.existsByRollNumber(rollNumber)){
+            throw new DuplicateRollNumberException("Roll number " + rollNumber + " is already taken");
         }
         List<Skill> userSkills = processSkills(request.getSkills());
 
-        Double cgpa = collegeResultService.fetchResults(request.getRollNumber()).getCgpa();
-        System.out.println("cgpa = " + cgpa);
+        CollegeResultResponse result = collegeResultService.fetchResults(rollNumber);
 
         Student student = Student.builder()
-                .rollNumber(request.getRollNumber())
+                .rollNumber(rollNumber)
                 .branch(request.getBranch())
-                .backlogs(request.getBacklogs())
+                .backlogs(result.getTotalBacklogs())
                 .phoneNumber(request.getPhoneNumber())
                 .dateOfBirth(request.getDateOfBirth())
                 .gender(request.getGender())
                 .graduationYear(request.getGraduationYear())
-                .cgpa(cgpa)
+                .cgpa(result.getCgpa())
                 .user(currUser)
                 .skills(userSkills)
                 .build();
@@ -124,9 +134,6 @@ public class StudentServiceImpl implements StudentService {
         if(request.getBranch() != null){
             student.setBranch(request.getBranch());
         }
-        if(request.getBacklogs() != null){
-            student.setBacklogs(request.getBacklogs());
-        }
         if(request.getPhoneNumber() != null) {
             student.setPhoneNumber(request.getPhoneNumber());
         }
@@ -138,9 +145,6 @@ public class StudentServiceImpl implements StudentService {
         }
         if(request.getGraduationYear() != null) {
             student.setGraduationYear(request.getGraduationYear());
-        }
-        if(request.getCgpa() != null){
-            student.setCgpa(request.getCgpa());
         }
         if(request.getSkills() != null){
             List<Skill> newSkills = processSkills(request.getSkills());

@@ -38,25 +38,35 @@ export function AuthProvider({ children }) {
     setUser(userPayload);
   }, []);
 
-  const login = useCallback(
-    async ({ email, password }) => {
-      const { data } = await authService.login({ email, password });
-      const token = data.token || data.accessToken || data.jwt;
-      const userPayload = data.user || {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        role: data.role,
-        studentId: data.studentId,
-        hasProfile: data.hasProfile,
-      };
-      persistSession(token, userPayload);
-      toast.success(`Welcome back, ${userPayload.firstName || "there"}!`);
-      router.push("/dashboard");
-      return userPayload;
-    },
-    [persistSession, router]
-  );
+    const login = useCallback(
+        async ({ email, password }) => {
+            try {
+                const { data } = await authService.login({ email, password });
+
+                const token = data.token || data.accessToken || data.jwt;
+
+                const userPayload = data.user || {
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    email: data.email,
+                    role: data.role,
+                    studentId: data.studentId,
+                    hasProfile: data.hasProfile,
+                };
+
+                persistSession(token, userPayload);
+                toast.success(`Welcome back, ${userPayload.firstName || "there"}!`);
+                router.push("/dashboard");
+                return userPayload;
+
+            } catch (error) {
+                throw new Error(
+                    error.response?.data || "Invalid email or password"
+                );
+            }
+        },
+        [persistSession, router]
+    );
 
   const register = useCallback(
     async (payload) => {

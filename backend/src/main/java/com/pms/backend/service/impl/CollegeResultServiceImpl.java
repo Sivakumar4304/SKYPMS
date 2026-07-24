@@ -20,6 +20,10 @@ public class CollegeResultServiceImpl implements CollegeResultService {
     @Override
     public CollegeResultResponse fetchResults(String rollNumber) {
 
+        if (rollNumber == null || rollNumber.isBlank()) {
+            throw new IllegalArgumentException("Roll number must not be empty");
+        }
+
         try {
 
             Document document = Jsoup.connect("https://vishnu.edu.in/Student-Results")
@@ -36,6 +40,7 @@ public class CollegeResultServiceImpl implements CollegeResultService {
                     .orElseThrow(() -> new RuntimeException("CGPA not found"));
             String cgpa = cgpaElement.selectFirst("b").text();
             if(cgpa.equals("NAN")){
+                System.out.println("NAN");
                 throw new RuntimeException("CGPA not found");
             }
             List<Double> sgpas = new ArrayList<>();
@@ -61,7 +66,7 @@ public class CollegeResultServiceImpl implements CollegeResultService {
                 }
             }
 
-            System.out.println(totalBacklogs);
+            System.out.println("Backlogs = " + totalBacklogs);
             System.out.println(sgpas);
             System.out.println("CGPA = " + cgpa);
 

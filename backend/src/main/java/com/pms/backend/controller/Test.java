@@ -19,7 +19,7 @@ public class Test {
 
     @GetMapping
     public String test() {
-        collegeResultService.fetchResults("23PA1A4219");
+        collegeResultService.fetchResults("23PA1A4251");
         return "Done";
     }
 }

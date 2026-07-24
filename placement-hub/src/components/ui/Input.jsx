@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 const Input = forwardRef(
   (
-    { label, error, hint, icon: Icon, type = "text", className, required, ...props },
+    { label, error, hint, icon: Icon, type = "text", className, required, disabled, ...props },
     ref
   ) => {
     const [show, setShow] = useState(false);
@@ -28,10 +28,12 @@ const Input = forwardRef(
           <input
             ref={ref}
             type={inputType}
+            disabled={disabled}
             className={cn(
               "h-11 w-full rounded-xl border bg-[var(--surface)] px-3.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] transition-all duration-150 focus-ring",
               Icon && "pl-10",
               isPassword && "pr-10",
+              disabled && "cursor-not-allowed opacity-60 bg-[var(--border)]",
               error
                 ? "border-[var(--danger)] focus:border-[var(--danger)]"
                 : "border-[var(--border)] focus:border-[var(--primary)]",

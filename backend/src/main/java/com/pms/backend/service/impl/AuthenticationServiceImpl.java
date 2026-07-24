@@ -14,6 +14,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.pms.backend.service.OtpService;
+import com.pms.backend.exception.EmailAlreadyExistsException;
+import com.pms.backend.exception.InvalidCredentialsException;
+import com.pms.backend.exception.InvalidOtpException;
+import org.springframework.security.authentication.BadCredentialsException;
 
 @Service
 @RequiredArgsConstructor
@@ -22,12 +27,17 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final OtpService otpService;
 
     @Override
     public AuthenticationResponse register(RegisterRequest request) {
-        if(userRepository.existsByEmail(request.getEmail())){
-            throw new RuntimeException("Email Already Exists");
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new EmailAlreadyExistsException("Email already exists");
         }
+        if (!otpService.verifyOtp(request.getEmail(), request.getOtp())) {
+            throw new InvalidOtpException("Invalid or expired OTP");
+        }
+
         User user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -49,16 +59,32 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public AuthenticationResponse login(LoginRequest request) {
-        Authentication authentication =  authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-        User user = (User) authentication.getPrincipal();
-        String token = jwtService.generateToken(user);
-        return AuthenticationResponse.builder()
-                .token(token)
-                .role(user.getRole().name())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .email(user.getEmail())
-                .message("User logged In Successfully")
-                .build();
+
+        try {
+
+            Authentication authentication =
+                    authenticationManager.authenticate(
+                            new UsernamePasswordAuthenticationToken(
+                                    request.getEmail(),
+                                    request.getPassword()
+                            )
+                    );
+
+            User user = (User) authentication.getPrincipal();
+
+            String token = jwtService.generateToken(user);
+
+            return AuthenticationResponse.builder()
+                    .token(token)
+                    .role(user.getRole().name())
+                    .firstName(user.getFirstName())
+                    .lastName(user.getLastName())
+                    .email(user.getEmail())
+                    .message("User logged in successfully")
+                    .build();
+
+        } catch (BadCredentialsException ex) {
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
     }
 }
