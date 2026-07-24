@@ -32,6 +32,7 @@ public class StudentServiceImpl implements StudentService {
     private final SkillRepository skillRepository;
     private final Cloudinary cloudinary;
     private final CloudinaryService cloudinaryService;
+    private final CollegeResultServiceImpl collegeResultService;
     private JwtService jwtService;
 
     private StudentResponse mapToResponse(Student student){
@@ -98,6 +99,9 @@ public class StudentServiceImpl implements StudentService {
         }
         List<Skill> userSkills = processSkills(request.getSkills());
 
+        Double cgpa = collegeResultService.fetchResults(request.getRollNumber()).getCgpa();
+        System.out.println("cgpa = " + cgpa);
+
         Student student = Student.builder()
                 .rollNumber(request.getRollNumber())
                 .branch(request.getBranch())
@@ -106,7 +110,7 @@ public class StudentServiceImpl implements StudentService {
                 .dateOfBirth(request.getDateOfBirth())
                 .gender(request.getGender())
                 .graduationYear(request.getGraduationYear())
-                .cgpa(request.getCgpa())
+                .cgpa(cgpa)
                 .user(currUser)
                 .skills(userSkills)
                 .build();
