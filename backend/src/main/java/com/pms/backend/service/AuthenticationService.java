@@ -7,4 +7,5 @@ import com.pms.backend.dto.request.RegisterRequest;
 public interface AuthenticationService {
     AuthenticationResponse register(RegisterRequest request);
     AuthenticationResponse login(LoginRequest request);
+    void resetPassword(String email, String otp, String newPassword);
 }

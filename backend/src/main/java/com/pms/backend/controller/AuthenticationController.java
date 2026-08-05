@@ -3,6 +3,7 @@ package com.pms.backend.controller;
 import com.pms.backend.dto.response.AuthenticationResponse;
 import com.pms.backend.dto.request.LoginRequest;
 import com.pms.backend.dto.request.RegisterRequest;
+import com.pms.backend.dto.request.ResetPasswordRequest;
 import com.pms.backend.service.AuthenticationService;
 import com.pms.backend.service.OtpService;
 import jakarta.validation.Valid;
@@ -34,5 +35,15 @@ public class AuthenticationController {
     public AuthenticationResponse login(@Valid @RequestBody LoginRequest request){
         return authenticationService.login(request);
     }
+    @PostMapping("/reset-password")
+    public String resetPassword(@RequestBody ResetPasswordRequest request) {
 
+        authenticationService.resetPassword(
+                request.getEmail(),
+                request.getOtp(),
+                request.getNewPassword()
+        );
+
+        return "Password reset successfully";
+    }
 }

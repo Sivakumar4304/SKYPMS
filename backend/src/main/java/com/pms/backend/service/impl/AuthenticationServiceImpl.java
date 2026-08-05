@@ -87,4 +87,19 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             throw new InvalidCredentialsException("Invalid email or password");
         }
     }
+    @Override
+    public void resetPassword(String email, String otp, String newPassword) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new InvalidCredentialsException("User not found"));
+
+        if (!otpService.verifyOtp(email, otp)) {
+            throw new InvalidOtpException("Invalid or expired OTP");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        userRepository.save(user);
+    }
 }
