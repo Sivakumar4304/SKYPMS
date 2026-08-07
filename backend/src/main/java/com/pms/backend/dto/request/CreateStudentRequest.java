@@ -18,7 +18,9 @@ public class CreateStudentRequest {
     private String phoneNumber;
     private LocalDate dateOfBirth;
     private Gender gender;
-    private Integer graduationYear;
     private Double cgpa;
     private List<String> skills;
+    private String githubUrl;
+    private String linkedinUrl;
+    private String portfolioUrl;
 }

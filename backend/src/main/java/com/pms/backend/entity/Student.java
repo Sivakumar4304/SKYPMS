@@ -52,6 +52,12 @@ public class Student {
 
     private String resumeUrl;
 
+    private String githubUrl;
+
+    private String linkedinUrl;
+
+    private String portfolioUrl;
+
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;

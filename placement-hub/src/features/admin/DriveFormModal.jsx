@@ -10,9 +10,20 @@ import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
 import ChipInput from "@/components/ui/ChipInput";
 import { driveService } from "@/services/driveService";
-
+const BRANCHES = [
+  "CSE",
+  "AIML",
+  "AIDS",
+  "CSBS",
+  "IT",
+  "ECE",
+  "EEE",
+  "CIVIL",
+  "MECH",
+];
 export default function DriveFormModal({ open, onOpenChange, drive, onSaved }) {
   const [skills, setSkills] = useState([]);
+  const [eligibleBranches, setEligibleBranches] = useState([]);
   const [saving, setSaving] = useState(false);
   const isEdit = !!drive?.id;
 
@@ -32,6 +43,7 @@ export default function DriveFormModal({ open, onOpenChange, drive, onSaved }) {
     },
   });
 
+
   useEffect(() => {
     if (open) {
       reset({
@@ -47,13 +59,24 @@ export default function DriveFormModal({ open, onOpenChange, drive, onSaved }) {
         backlogRestrictions: drive?.backlogRestrictions || "",
         graduationYear: drive?.graduationYear || "",
       });
+
       setSkills(
-        Array.isArray(drive?.requiredSkills)
-          ? drive.requiredSkills
-          : drive?.requiredSkills?.split(",").map((s) => s.trim()).filter(Boolean) || []
+          Array.isArray(drive?.requiredSkills)
+              ? drive.requiredSkills
+              : drive?.requiredSkills
+              ?.split(",")
+              .map((s) => s.trim())
+              .filter(Boolean) || []
+      );
+
+      setEligibleBranches(
+          Array.isArray(drive?.eligibleBranches)
+              ? drive.eligibleBranches
+              : []
       );
     }
   }, [open, drive, reset]);
+
 
   const onSubmit = async (values) => {
     setSaving(true);
@@ -65,6 +88,7 @@ export default function DriveFormModal({ open, onOpenChange, drive, onSaved }) {
         backlogRestrictions: values.backlogRestrictions ? Number(values.backlogRestrictions) : null,
         graduationYear: values.graduationYear ? Number(values.graduationYear) : null,
         requiredSkills: skills.join(", "),
+        eligibleBranches: eligibleBranches,
       };
       if (isEdit) {
         await driveService.update(drive.id, payload);
@@ -105,6 +129,36 @@ export default function DriveFormModal({ open, onOpenChange, drive, onSaved }) {
           <Input label="Max backlogs" type="number" placeholder="0" {...register("backlogRestrictions")} />
           <Input label="Graduation year" type="number" placeholder="2026" {...register("graduationYear")} />
         </div>
+        <div>
+          <p className="mb-2 text-sm font-medium">Eligible branches</p>
+
+          <div className="flex flex-wrap gap-2">
+            {BRANCHES.map((branch) => {
+              const selected = eligibleBranches.includes(branch);
+
+              return (
+                  <button
+                      key={branch}
+                      type="button"
+                      onClick={() =>
+                          setEligibleBranches((prev) =>
+                              selected
+                                  ? prev.filter((b) => b !== branch)
+                                  : [...prev, branch]
+                          )
+                      }
+                      className={`rounded-lg border px-3 py-1.5 text-sm ${
+                          selected
+                              ? "border-[var(--primary)] bg-blue-50 text-[var(--primary)]"
+                              : "border-[var(--border)] text-[var(--muted)]"
+                      }`}
+                  >
+                    {branch}
+                  </button>
+              );
+            })}
+          </div>
+        </div>
         <ChipInput label="Skills required" value={skills} onChange={setSkills} />
         <Textarea label="Drive description" {...register("driveDescription")} />
         <Textarea label="Job description" {...register("jobDescription")} />
@@ -118,6 +172,7 @@ export default function DriveFormModal({ open, onOpenChange, drive, onSaved }) {
           </Button>
         </div>
       </form>
+
     </Modal>
   );
 }

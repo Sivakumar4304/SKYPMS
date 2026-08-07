@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import com.pms.backend.enums.Branch;
 
 @Service
 @RequiredArgsConstructor
@@ -58,6 +59,9 @@ public class StudentServiceImpl implements StudentService {
                 .skills(responseSkills)
                 .profileImageUrl(student.getProfileImageUrl())
                 .resumeUrl(student.getResumeUrl())
+                .githubUrl(student.getGithubUrl())
+                .linkedinUrl(student.getLinkedinUrl())
+                .portfolioUrl(student.getPortfolioUrl())
                 .build();
     }
 
@@ -89,6 +93,27 @@ public class StudentServiceImpl implements StudentService {
                 .orElseThrow(() -> new StudentNotFoundException("Student not found"));
     }
 
+
+    private Branch deriveBranch(String rollNumber) {
+
+        String branchCode = rollNumber.substring(6, 8);
+
+        return switch (branchCode) {
+            case "01" -> Branch.MECH;
+            case "02" -> Branch.EEE;
+            case "03" -> Branch.CIVIL;
+            case "04" -> Branch.ECE;
+            case "05" -> Branch.CSE;
+            case "12" -> Branch.IT;
+            case "42" -> Branch.AIML;
+            case "45" -> Branch.AIDS;
+            case "57" -> Branch.CSBS;
+            default -> throw new IllegalArgumentException(
+                    "Invalid branch code in roll number: " + branchCode
+            );
+        };
+    }
+
     @Override
     public StudentResponse createProfile(CreateStudentRequest request) {
         String loggedInUserEmail = AuthUtils.getLoggedInUserEmail();
@@ -104,6 +129,14 @@ public class StudentServiceImpl implements StudentService {
             throw new IllegalArgumentException("Email format invalid: local part must be at least 10 characters");
         }
         String rollNumber = localPart.substring(0, 10).toUpperCase();
+        Branch branch = deriveBranch(rollNumber);
+        int joiningYear = 2000 + Integer.parseInt(rollNumber.substring(0, 2));
+
+        boolean isLateralEntry = rollNumber.substring(4, 6).equals("5A");
+
+        int graduationYear = isLateralEntry
+                ? joiningYear + 3
+                : joiningYear + 4;
 
         if(studentRepository.existsByRollNumber(rollNumber)){
             throw new DuplicateRollNumberException("Roll number " + rollNumber + " is already taken");
@@ -114,15 +147,18 @@ public class StudentServiceImpl implements StudentService {
 
         Student student = Student.builder()
                 .rollNumber(rollNumber)
-                .branch(request.getBranch())
+                .branch(branch)
                 .backlogs(result.getTotalBacklogs())
                 .phoneNumber(request.getPhoneNumber())
                 .dateOfBirth(request.getDateOfBirth())
                 .gender(request.getGender())
-                .graduationYear(request.getGraduationYear())
+                .graduationYear(graduationYear)
                 .cgpa(result.getCgpa())
                 .user(currUser)
                 .skills(userSkills)
+                .githubUrl(request.getGithubUrl())
+                .linkedinUrl(request.getLinkedinUrl())
+                .portfolioUrl(request.getPortfolioUrl())
                 .build();
         student = studentRepository.save(student);
         return mapToResponse(student);
@@ -131,9 +167,7 @@ public class StudentServiceImpl implements StudentService {
     @Override
     public StudentResponse updateProfile(UpdateStudentRequest request) {
         Student student = getCurrentStudent();
-        if(request.getBranch() != null){
-            student.setBranch(request.getBranch());
-        }
+
         if(request.getPhoneNumber() != null) {
             student.setPhoneNumber(request.getPhoneNumber());
         }
@@ -143,13 +177,24 @@ public class StudentServiceImpl implements StudentService {
         if(request.getGender() != null) {
             student.setGender(request.getGender());
         }
-        if(request.getGraduationYear() != null) {
-            student.setGraduationYear(request.getGraduationYear());
-        }
+
         if(request.getSkills() != null){
             List<Skill> newSkills = processSkills(request.getSkills());
             student.setSkills(newSkills);
         }
+
+        if (request.getGithubUrl() != null) {
+            student.setGithubUrl(request.getGithubUrl());
+        }
+
+        if (request.getLinkedinUrl() != null) {
+            student.setLinkedinUrl(request.getLinkedinUrl());
+        }
+
+        if (request.getPortfolioUrl() != null) {
+            student.setPortfolioUrl(request.getPortfolioUrl());
+        }
+
         student = studentRepository.save(student);
         return mapToResponse(student);
     }
@@ -192,7 +237,26 @@ public class StudentServiceImpl implements StudentService {
         String resumeUrl = cloudinaryService.uploadResume(file);
         System.out.println("Resume Url = " + resumeUrl);
         student.setResumeUrl(resumeUrl);
+
         student = studentRepository.save(student);
         return mapToResponse(student);
+    }
+    @Override
+    public List<StudentResponse> getStudentsByGraduationYear(Integer graduationYear) {
+
+        List<Student> students =
+                studentRepository.findByGraduationYear(graduationYear);
+
+        List<StudentResponse> responses = new ArrayList<>();
+
+        for (Student student : students) {
+            responses.add(mapToResponse(student));
+        }
+
+        return responses;
+    }
+    @Override
+    public List<Integer> getAvailableBatches() {
+        return studentRepository.findDistinctGraduationYears();
     }
 }

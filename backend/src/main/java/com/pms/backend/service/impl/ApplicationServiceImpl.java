@@ -25,14 +25,26 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final PlacementDriveRepository placementDriveRepository;
 
     private ApplicationResponse toResponse(Application app) {
+
         PlacementDrive drive = app.getDrive();
+        Student student = app.getStudent();
+
         return ApplicationResponse.builder()
                 .id(app.getId())
+
+                .studentId(student.getId())
+                .studentName(
+                        student.getUser().getFirstName() + " " +
+                                student.getUser().getLastName()
+                )
+                .rollNumber(student.getRollNumber())
+
                 .driveId(drive.getId())
                 .companyName(drive.getCompanyName())
                 .role(drive.getRole())
                 .jobPackage(drive.getJobPackage())
                 .jobLocation(drive.getJobLocation())
+
                 .status(app.getStatus())
                 .appliedAt(app.getAppliedAt())
                 .build();
@@ -48,6 +60,54 @@ public class ApplicationServiceImpl implements ApplicationService {
 
         if (applicationRepository.existsByStudentAndDrive(student, drive)) {
             throw new RuntimeException("You have already applied for this drive");
+        }
+
+
+        // Branch eligibility
+        if (drive.getEligibleBranches() != null &&
+                !drive.getEligibleBranches().isEmpty() &&
+                !drive.getEligibleBranches().contains(student.getBranch())) {
+
+            throw new RuntimeException(
+                    "You are not eligible for this drive. Your branch is not allowed."
+            );
+        }
+
+// CGPA eligibility
+        if (drive.getMinCgpa() != null &&
+                student.getCgpa() < drive.getMinCgpa()) {
+
+            throw new RuntimeException(
+                    "You are not eligible for this drive. Minimum CGPA required is "
+                            + drive.getMinCgpa()
+            );
+        }
+
+// Backlog eligibility
+        if (drive.getBacklogRestrictions() != null &&
+                student.getBacklogs() > drive.getBacklogRestrictions()) {
+
+            throw new RuntimeException(
+                    "You are not eligible for this drive due to backlog restrictions."
+            );
+        }
+
+// Graduation year eligibility
+        if (drive.getGraduationYear() != null &&
+                !drive.getGraduationYear().equals(student.getGraduationYear())) {
+
+            throw new RuntimeException(
+                    "You are not eligible for this graduation batch."
+            );
+        }
+
+// Deadline eligibility
+        if (drive.getDeadline() != null &&
+                drive.getDeadline().isBefore(java.time.LocalDateTime.now())) {
+
+            throw new RuntimeException(
+                    "The application deadline for this drive has passed."
+            );
         }
 
         Application application = Application.builder()

@@ -11,27 +11,24 @@ import { useRouter } from "next/navigation";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import SegmentedControl from "@/components/ui/SegmentedControl";
-import SearchableSelect from "@/components/ui/SearchableSelect";
 import SkillSelect from "@/components/ui/SkillSelect";
-import { BRANCHES, GENDERS } from "@/constants";
+import { GENDERS } from "@/constants";
 import { studentService } from "@/services/studentService";
 import { useAuth } from "@/context/AuthContext";
 
 const schema = z.object({
-  branch: z.string().min(1, "Select your branch"),
-  graduationYear: z
-    .string()
-    .min(4, "Enter a valid year")
-    .max(4, "Enter a valid year"),
   phoneNumber: z
     .string()
     .min(10, "Enter a valid phone number")
     .max(15, "Enter a valid phone number"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   gender: z.string().min(1, "Select your gender"),
+  githubUrl: z.string().optional(),
+  linkedinUrl: z.string().optional(),
+  portfolioUrl: z.string().optional(),
 });
 
-const STEPS = ["Personal details", "Academic details", "Skills"];
+const STEPS = ["Personal details", "Academic details", "Skills & Links"];
 
 export default function ProfileWizard() {
   const router = useRouter();
@@ -68,7 +65,6 @@ export default function ProfileWizard() {
     formState: { errors },
   } = useForm({ resolver: zodResolver(schema), mode: "onBlur" });
 
-  const branch = watch("branch");
   const gender = watch("gender");
 
   const handleFetchResults = async () => {
@@ -92,7 +88,7 @@ export default function ProfileWizard() {
 
   const stepFields = [
     ["phoneNumber", "dateOfBirth", "gender"],
-    ["branch", "graduationYear"],
+    [],
     [],
   ];
 
@@ -115,7 +111,7 @@ export default function ProfileWizard() {
     try {
       await studentService.createProfile({
         ...values,
-        graduationYear: Number(values.graduationYear),
+        // graduationYear: Number(values.graduationYear),
         backlogs: fetchedBacklogs,
         cgpa: fetchedCgpa,
         skills,
@@ -221,23 +217,6 @@ export default function ProfileWizard() {
               >
                 Fetch results
               </Button>
-              <SearchableSelect
-                label="Branch"
-                options={BRANCHES}
-                value={branch}
-                onChange={(v) => setValue("branch", v, { shouldValidate: true })}
-                required
-                error={errors.branch?.message}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Graduation year"
-                  placeholder="2027"
-                  required
-                  error={errors.graduationYear?.message}
-                  {...register("graduationYear")}
-                />
-              </div>
               {resultsFetched ? (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="rounded-xl border border-[var(--border)] bg-[var(--border)] px-3.5 py-3 opacity-60">
@@ -271,6 +250,23 @@ export default function ProfileWizard() {
                 value={skills}
                 onChange={setSkills}
                 availableSkills={availableSkills}
+              />
+              <Input
+                  label="GitHub"
+                  placeholder="https://github.com/username"
+                  {...register("githubUrl")}
+              />
+
+              <Input
+                  label="LinkedIn"
+                  placeholder="https://linkedin.com/in/username"
+                  {...register("linkedinUrl")}
+              />
+
+              <Input
+                  label="Portfolio"
+                  placeholder="https://yourportfolio.com"
+                  {...register("portfolioUrl")}
               />
               <p className="text-xs text-[var(--muted)]">
                 You can upload your photo and resume right after creating your profile.

@@ -12,10 +12,9 @@ import Button from "@/components/ui/Button";
 import { useAuth } from "@/context/AuthContext";
 
 const schema = z.object({
-  email: z.string().min(1, "Email is required").email("Enter a valid email").refine((v) => {
-    const domain = v.split('@')[1];
-    return domain && domain.toLowerCase().includes('.edu');
-  }, "Only .edu email addresses are allowed"),
+    email: z.string()
+        .min(1, "Email is required")
+        .email("Enter a valid email"),
   password: z.string().min(1, "Password is required"),
   remember: z.boolean().optional(),
 });

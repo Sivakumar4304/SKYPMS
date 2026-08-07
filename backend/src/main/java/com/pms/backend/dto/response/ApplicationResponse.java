@@ -19,4 +19,7 @@ public class ApplicationResponse {
     private String jobLocation;
     private ApplicationStatus status;
     private LocalDateTime appliedAt;
+    private Long studentId;
+    private String studentName;
+    private String rollNumber;
 }

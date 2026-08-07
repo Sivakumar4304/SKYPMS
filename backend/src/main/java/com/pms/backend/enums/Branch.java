@@ -9,4 +9,5 @@ public enum Branch {
     ECE,
     EEE,
     MECH,
+    CSBS
 }

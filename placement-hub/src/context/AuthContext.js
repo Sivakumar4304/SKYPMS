@@ -55,8 +55,15 @@ export function AuthProvider({ children }) {
                 };
 
                 persistSession(token, userPayload);
+
                 toast.success(`Welcome back, ${userPayload.firstName || "there"}!`);
-                router.push("/dashboard");
+
+                if (userPayload.role === "ADMIN") {
+                    router.push("/admin/drives");
+                } else {
+                    router.push("/dashboard");
+                }
+
                 return userPayload;
 
             } catch (error) {

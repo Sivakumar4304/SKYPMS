@@ -40,4 +40,7 @@ public class StudentResponse {
     private String profileImageUrl;
 
     private String resumeUrl;
+    private String githubUrl;
+    private String linkedinUrl;
+    private String portfolioUrl;
 }

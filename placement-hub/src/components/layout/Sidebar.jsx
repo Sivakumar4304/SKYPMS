@@ -8,6 +8,7 @@ import {
   Briefcase,
   ClipboardList,
   ShieldCheck,
+    Users,
   Sparkles,
   X,
 } from "lucide-react";
@@ -25,6 +26,7 @@ const STUDENT_LINKS = [
 const ADMIN_LINKS = [
   { href: "/admin/drives", label: "Manage Drives", icon: Briefcase },
   { href: "/admin/applications", label: "Applications", icon: ShieldCheck },
+    { href: "/admin/batches", label: "Batch Management", icon: Users },
 ];
 
 function NavLinks({ pathname, onNavigate }) {

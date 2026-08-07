@@ -80,7 +80,6 @@ export default function ProfileView({ profile, onUpdated }) {
         branch,
         gender,
         skills,
-        graduationYear: Number(values.graduationYear),
         backlogs: Number(values.backlogs),
         cgpa: Number(values.cgpa),
       });
@@ -128,6 +127,9 @@ export default function ProfileView({ profile, onUpdated }) {
                 ["Phone number", profile.phoneNumber],
                 ["Date of birth", profile.dateOfBirth],
                 ["Gender", profile.gender],
+                ["GitHub", profile.githubUrl],
+                ["LinkedIn", profile.linkedinUrl],
+                ["Portfolio", profile.portfolioUrl],
               ].map(([label, value]) => (
                 <div key={label}>
                   <dt className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">{label}</dt>
@@ -174,9 +176,6 @@ export default function ProfileView({ profile, onUpdated }) {
             </Button>
             <SearchableSelect label="Branch" options={BRANCHES} value={branch} onChange={setBranch} />
             <div className="grid grid-cols-2 gap-4">
-              <Input label="Graduation year" {...register("graduationYear")} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div className={`rounded-xl border px-3.5 py-3 ${resultsFetched ? "border-[var(--border)] bg-[var(--border)] opacity-60" : "border-[var(--border)] bg-[var(--surface)] opacity-40"}`}>
                 <p className="text-xs font-medium text-[var(--muted)] mb-1">CGPA</p>
                 <p className="text-sm font-semibold text-[var(--foreground)]">
@@ -194,6 +193,23 @@ export default function ProfileView({ profile, onUpdated }) {
             <Input label="Date of birth" type="date" icon={Calendar} {...register("dateOfBirth")} />
             <SegmentedControl label="Gender" options={GENDERS} value={gender} onChange={setGender} />
             <SkillSelect label="Skills" value={skills} onChange={setSkills} availableSkills={availableSkills} />
+            <Input
+                label="GitHub"
+                placeholder="https://github.com/username"
+                {...register("githubUrl")}
+            />
+
+            <Input
+                label="LinkedIn"
+                placeholder="https://linkedin.com/in/username"
+                {...register("linkedinUrl")}
+            />
+
+            <Input
+                label="Portfolio"
+                placeholder="https://yourportfolio.com"
+                {...register("portfolioUrl")}
+            />
             <div className="flex justify-end gap-3 pt-2">
               <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
                 Cancel
