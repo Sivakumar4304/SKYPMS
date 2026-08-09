@@ -7,6 +7,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Getter
@@ -63,4 +64,12 @@ public class PlacementDrive {
     @Column(name = "branch")
     @Builder.Default
     private List<Branch> eligibleBranches = new ArrayList<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "placementDrive",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Form> forms = new ArrayList<>();
 }

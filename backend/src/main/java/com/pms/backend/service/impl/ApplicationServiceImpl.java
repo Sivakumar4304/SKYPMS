@@ -6,13 +6,13 @@ import com.pms.backend.entity.PlacementDrive;
 import com.pms.backend.entity.Student;
 import com.pms.backend.enums.ApplicationStatus;
 import com.pms.backend.service.ApplicationService;
-import org.springframework.stereotype.Service;
-
 import com.pms.backend.repository.ApplicationRepository;
 import com.pms.backend.repository.PlacementDriveRepository;
 import com.pms.backend.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -52,16 +52,21 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Override
     public ApplicationResponse applyForDrive(Long studentId, Long driveId) {
+
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("Student not found"));
 
         PlacementDrive drive = placementDriveRepository.findById(driveId)
-                .orElseThrow(() -> new RuntimeException("Placement Drive not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("Placement Drive not found"));
 
+        // Already applied
         if (applicationRepository.existsByStudentAndDrive(student, drive)) {
-            throw new RuntimeException("You have already applied for this drive");
+            throw new RuntimeException(
+                    "You have already applied for this drive."
+            );
         }
-
 
         // Branch eligibility
         if (drive.getEligibleBranches() != null &&
@@ -69,85 +74,128 @@ public class ApplicationServiceImpl implements ApplicationService {
                 !drive.getEligibleBranches().contains(student.getBranch())) {
 
             throw new RuntimeException(
-                    "You are not eligible for this drive. Your branch is not allowed."
+                    "Not eligible: Your branch is " +
+                            student.getBranch() +
+                            ", but this drive accepts: " +
+                            drive.getEligibleBranches()
+                                    .stream()
+                                    .map(String::valueOf)
+                                    .collect(java.util.stream.Collectors.joining(", "))
             );
         }
 
-// CGPA eligibility
+        // CGPA eligibility
         if (drive.getMinCgpa() != null &&
                 student.getCgpa() < drive.getMinCgpa()) {
 
             throw new RuntimeException(
-                    "You are not eligible for this drive. Minimum CGPA required is "
-                            + drive.getMinCgpa()
+                    "Not eligible: Minimum CGPA required is " +
+                            drive.getMinCgpa() +
+                            ", but your CGPA is " +
+                            student.getCgpa()
             );
         }
 
-// Backlog eligibility
+        // Backlog eligibility
         if (drive.getBacklogRestrictions() != null &&
                 student.getBacklogs() > drive.getBacklogRestrictions()) {
 
             throw new RuntimeException(
-                    "You are not eligible for this drive due to backlog restrictions."
+                    "Not eligible: Maximum allowed backlogs are " +
+                            drive.getBacklogRestrictions() +
+                            ", but you have " +
+                            student.getBacklogs()
             );
         }
 
-// Graduation year eligibility
+        // Graduation year eligibility
         if (drive.getGraduationYear() != null &&
-                !drive.getGraduationYear().equals(student.getGraduationYear())) {
+                !drive.getGraduationYear()
+                        .equals(student.getGraduationYear())) {
 
             throw new RuntimeException(
-                    "You are not eligible for this graduation batch."
+                    "Not eligible: Required graduation year is " +
+                            drive.getGraduationYear() +
+                            ", but your graduation year is " +
+                            student.getGraduationYear()
             );
         }
 
-// Deadline eligibility
+        // Deadline eligibility
         if (drive.getDeadline() != null &&
-                drive.getDeadline().isBefore(java.time.LocalDateTime.now())) {
+                drive.getDeadline().isBefore(LocalDateTime.now())) {
 
             throw new RuntimeException(
-                    "The application deadline for this drive has passed."
+                    "Application closed: The deadline for this drive was " +
+                            drive.getDeadline()
             );
         }
 
+        // Create application
         Application application = Application.builder()
                 .student(student)
                 .drive(drive)
                 .status(ApplicationStatus.APPLIED)
                 .build();
 
-        return toResponse(applicationRepository.save(application));
+        return toResponse(
+                applicationRepository.save(application)
+        );
     }
 
     @Override
     public void withdrawApplication(Long applicationId) {
+
         Application application = applicationRepository.findById(applicationId)
-                .orElseThrow(() -> new RuntimeException("Application not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("Application not found"));
+
         application.setStatus(ApplicationStatus.WITHDRAWN);
+
         applicationRepository.save(application);
     }
 
     @Override
-    public List<ApplicationResponse> getApplicationsByStudent(Long studentId) {
+    public List<ApplicationResponse> getApplicationsByStudent(
+            Long studentId) {
+
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("Student not found"));
+
         return applicationRepository.findByStudent(student)
-                .stream().map(this::toResponse).collect(Collectors.toList());
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<ApplicationResponse> getApplicationsByDrive(Long driveId) {
+    public List<ApplicationResponse> getApplicationsByDrive(
+            Long driveId) {
+
         PlacementDrive drive = placementDriveRepository.findById(driveId)
-                .orElseThrow(() -> new RuntimeException("Placement Drive not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("Placement Drive not found"));
+
         return applicationRepository.findByDrive(drive)
-                .stream().map(this::toResponse).collect(Collectors.toList());
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public ApplicationResponse updateApplicationStatus(Long applicationId, ApplicationStatus status) {
+    public ApplicationResponse updateApplicationStatus(
+            Long applicationId,
+            ApplicationStatus status) {
+
         Application application = applicationRepository.findById(applicationId)
-                .orElseThrow(() -> new RuntimeException("Application not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("Application not found"));
+
         application.setStatus(status);
-        return toResponse(applicationRepository.save(application));
+
+        return toResponse(
+                applicationRepository.save(application)
+        );
     }
 }
