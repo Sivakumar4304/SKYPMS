@@ -50,6 +50,7 @@ export function AuthProvider({ children }) {
                     lastName: data.lastName,
                     email: data.email,
                     role: data.role,
+                    userId: data.userId,
                     studentId: data.studentId,
                     hasProfile: data.hasProfile,
                 };

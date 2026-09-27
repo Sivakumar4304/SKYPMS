@@ -1,8 +1,9 @@
-// src/main/java/com/pms/backend/service/impl/PlacementDriveServiceImpl.java
 package com.pms.backend.service.impl;
 
 import com.pms.backend.dto.PlacementDriveRequest;
+import com.pms.backend.entity.Company;
 import com.pms.backend.entity.PlacementDrive;
+import com.pms.backend.repository.CompanyRepository;
 import com.pms.backend.repository.PlacementDriveRepository;
 import com.pms.backend.service.PlacementDriveService;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +19,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class PlacementDriveServiceImpl implements PlacementDriveService {
 
     private final PlacementDriveRepository driveRepository;
+    private final CompanyRepository companyRepository;
 
     @Override
     @Transactional
     public PlacementDrive createDrive(PlacementDriveRequest request) {
+
+        Company company = companyRepository.findById(request.getCompanyId())
+                .orElseThrow(() ->
+                        new RuntimeException("Company not found with id: " + request.getCompanyId()));
+
         PlacementDrive drive = PlacementDrive.builder()
-                .companyName(request.getCompanyName())
+                .company(company)
                 .role(request.getRole())
                 .jobPackage(request.getJobPackage())
                 .jobLocation(request.getJobLocation())
@@ -44,9 +51,14 @@ public class PlacementDriveServiceImpl implements PlacementDriveService {
     @Override
     @Transactional
     public PlacementDrive updateDrive(Long id, PlacementDriveRequest request) {
+
         PlacementDrive drive = getDriveById(id);
 
-        drive.setCompanyName(request.getCompanyName());
+        Company company = companyRepository.findById(request.getCompanyId())
+                .orElseThrow(() ->
+                        new RuntimeException("Company not found with id: " + request.getCompanyId()));
+
+        drive.setCompany(company);
         drive.setRole(request.getRole());
         drive.setJobPackage(request.getJobPackage());
         drive.setJobLocation(request.getJobLocation());
@@ -62,6 +74,7 @@ public class PlacementDriveServiceImpl implements PlacementDriveService {
         // Safe update for Hibernate @ElementCollection
         if (drive.getEligibleBranches() != null) {
             drive.getEligibleBranches().clear();
+
             if (request.getEligibleBranches() != null) {
                 drive.getEligibleBranches().addAll(request.getEligibleBranches());
             }
@@ -82,16 +95,29 @@ public class PlacementDriveServiceImpl implements PlacementDriveService {
     @Override
     public PlacementDrive getDriveById(Long id) {
         return driveRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Placement Drive not found with id: " + id));
+                .orElseThrow(() ->
+                        new RuntimeException("Placement Drive not found with id: " + id));
     }
 
     @Override
-    public Page<PlacementDrive> getAllDrives(int page, int size, String searchCompany) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("deadline").descending());
+    public Page<PlacementDrive> getAllDrives(
+            int page,
+            int size,
+            String searchCompany) {
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by("deadline").descending()
+        );
 
         if (searchCompany != null && !searchCompany.trim().isEmpty()) {
-            return driveRepository.findByCompanyNameContainingIgnoreCase(searchCompany, pageable);
+            return driveRepository.findByCompany_NameContainingIgnoreCase(
+                    searchCompany,
+                    pageable
+            );
         }
+
         return driveRepository.findAll(pageable);
     }
 }

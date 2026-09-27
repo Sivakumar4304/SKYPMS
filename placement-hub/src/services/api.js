@@ -38,7 +38,6 @@ api.interceptors.response.use(
             }
         }
 
-        // Get the actual backend error message first
         let message =
             error?.response?.data?.message ||
             error?.response?.data?.error ||
@@ -46,8 +45,6 @@ api.interceptors.response.use(
                 ? error.response.data
                 : null);
 
-        // Only use permission message when there is genuinely
-        // no useful backend message.
         if (!message) {
             if (status === 403) {
                 message = "You don't have permission to do that.";

@@ -11,8 +11,8 @@ import java.util.List;
 @Data
 public class PlacementDriveRequest {
 
-    @NotBlank(message = "Company name cannot be blank")
-    private String companyName;
+    @NotNull(message = "Company ID is required")
+    private Long companyId;
 
     @NotBlank(message = "Role cannot be blank")
     private String role;

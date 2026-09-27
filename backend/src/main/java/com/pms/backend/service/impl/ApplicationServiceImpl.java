@@ -1,14 +1,16 @@
 package com.pms.backend.service.impl;
 
+import com.pms.backend.dto.request.NotificationRequest;
 import com.pms.backend.dto.response.ApplicationResponse;
 import com.pms.backend.entity.Application;
 import com.pms.backend.entity.PlacementDrive;
 import com.pms.backend.entity.Student;
 import com.pms.backend.enums.ApplicationStatus;
-import com.pms.backend.service.ApplicationService;
 import com.pms.backend.repository.ApplicationRepository;
 import com.pms.backend.repository.PlacementDriveRepository;
 import com.pms.backend.repository.StudentRepository;
+import com.pms.backend.service.ApplicationService;
+import com.pms.backend.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +25,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final ApplicationRepository applicationRepository;
     private final StudentRepository studentRepository;
     private final PlacementDriveRepository placementDriveRepository;
+    private final NotificationService notificationService;
 
     private ApplicationResponse toResponse(Application app) {
 
@@ -40,7 +43,7 @@ public class ApplicationServiceImpl implements ApplicationService {
                 .rollNumber(student.getRollNumber())
 
                 .driveId(drive.getId())
-                .companyName(drive.getCompanyName())
+                .companyName(drive.getCompany().getName())
                 .role(drive.getRole())
                 .jobPackage(drive.getJobPackage())
                 .jobLocation(drive.getJobLocation())
@@ -80,7 +83,7 @@ public class ApplicationServiceImpl implements ApplicationService {
                             drive.getEligibleBranches()
                                     .stream()
                                     .map(String::valueOf)
-                                    .collect(java.util.stream.Collectors.joining(", "))
+                                    .collect(Collectors.joining(", "))
             );
         }
 
@@ -138,9 +141,25 @@ public class ApplicationServiceImpl implements ApplicationService {
                 .status(ApplicationStatus.APPLIED)
                 .build();
 
-        return toResponse(
-                applicationRepository.save(application)
-        );
+        // Save application
+        Application savedApplication =
+                applicationRepository.save(application);
+
+        // Notification: Application Submitted
+        NotificationRequest notificationRequest =
+                NotificationRequest.builder()
+                        .userId(student.getUser().getId())
+                        .title("Application Submitted")
+                        .message(
+                                "Your application for " +
+                                        drive.getCompany().getName() +
+                                        " has been submitted successfully."
+                        )
+                        .build();
+
+        notificationService.createNotification(notificationRequest);
+
+        return toResponse(savedApplication);
     }
 
     @Override
@@ -153,6 +172,23 @@ public class ApplicationServiceImpl implements ApplicationService {
         application.setStatus(ApplicationStatus.WITHDRAWN);
 
         applicationRepository.save(application);
+
+        Student student = application.getStudent();
+        PlacementDrive drive = application.getDrive();
+
+        // Notification: Application Withdrawn
+        NotificationRequest notificationRequest =
+                NotificationRequest.builder()
+                        .userId(student.getUser().getId())
+                        .title("Application Withdrawn")
+                        .message(
+                                "Your application for " +
+                                        drive.getCompany().getName() +
+                                        " has been withdrawn successfully."
+                        )
+                        .build();
+
+        notificationService.createNotification(notificationRequest);
     }
 
     @Override
@@ -194,8 +230,29 @@ public class ApplicationServiceImpl implements ApplicationService {
 
         application.setStatus(status);
 
-        return toResponse(
-                applicationRepository.save(application)
-        );
+        // Save updated application
+        Application updatedApplication =
+                applicationRepository.save(application);
+
+        Student student = application.getStudent();
+        PlacementDrive drive = application.getDrive();
+
+        // Notification: Application Status Updated
+        NotificationRequest notificationRequest =
+                NotificationRequest.builder()
+                        .userId(student.getUser().getId())
+                        .title("Application Status Updated")
+                        .message(
+                                "Your application for " +
+                                        drive.getCompany().getName() +
+                                        " has been updated to " +
+                                        status +
+                                        "."
+                        )
+                        .build();
+
+        notificationService.createNotification(notificationRequest);
+
+        return toResponse(updatedApplication);
     }
 }

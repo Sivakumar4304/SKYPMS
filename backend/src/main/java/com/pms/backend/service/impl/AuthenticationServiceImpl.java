@@ -23,6 +23,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 @Service
 @RequiredArgsConstructor
 public class AuthenticationServiceImpl implements AuthenticationService {
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -31,9 +32,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public AuthenticationResponse register(RegisterRequest request) {
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new EmailAlreadyExistsException("Email already exists");
         }
+
         if (!otpService.verifyOtp(request.getEmail(), request.getOtp())) {
             throw new InvalidOtpException("Invalid or expired OTP");
         }
@@ -45,14 +48,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.STUDENT)
                 .build();
+
         userRepository.save(user);
+
         String token = jwtService.generateToken(user);
+
         return AuthenticationResponse.builder()
                 .token(token)
                 .role(user.getRole().name())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .email(user.getEmail())
+                .userId(user.getId())
                 .message("User registered Successfully")
                 .build();
     }
@@ -80,6 +87,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
                     .email(user.getEmail())
+                    .userId(user.getId())
                     .message("User logged in successfully")
                     .build();
 
@@ -87,8 +95,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             throw new InvalidCredentialsException("Invalid email or password");
         }
     }
+
     @Override
-    public void resetPassword(String email, String otp, String newPassword) {
+    public void resetPassword(
+            String email,
+            String otp,
+            String newPassword) {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
